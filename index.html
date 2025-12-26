@@ -140,31 +140,26 @@
         layer_GoogleSatellite_0;
         map.addLayer(layer_GoogleSatellite_0);
         function pop_NNADD_1(feature, layer) {
-    var photoHtml = (feature.properties && feature.properties['URL']) ? String(feature.properties['URL']) : '';
-    var ts = (feature.properties && feature.properties['timestamp']) ? String(feature.properties['timestamp']) : '';
-
-    // Inject referrerpolicy + cache buster if field contains <img ...>
-    if (photoHtml && photoHtml.indexOf('<img') !== -1) {
-        // Add referrerpolicy if missing
-        if (photoHtml.indexOf('referrerpolicy=') === -1) {
-            photoHtml = photoHtml.replace('<img ', '<img referrerpolicy="no-referrer" ');
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['longitude'] !== null ? autolinker.link(String(feature.properties['longitude']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['latitude'] !== null ? autolinker.link(String(feature.properties['latitude']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['timestamp'] !== null ? autolinker.link(String(feature.properties['timestamp']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Untitled spreadsheet - Sheet1_URL'] !== null ? autolinker.link(String(feature.properties['Untitled spreadsheet - Sheet1_URL']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
         }
-        // Add cache buster to src
-        photoHtml = photoHtml.replace(/src="([^"]+)"/, function(_, u){
-            var sep = (u.indexOf('?') >= 0) ? '&' : '?';
-            return 'src="' + u + sep + 't=' + Date.now() + '"';
-        });
-        }
-
-    var popupContent =
-        '<div style="width:380px;">' +
-            (photoHtml ? photoHtml : '') +
-            (ts ? '<div style="margin-top:6px;"><b>Date:</b> ' + ts + '</div>' : '') +
-        '</div>';
-
-    layer.bindPopup(popupContent, { maxWidth: 420, maxHeight: 400 });
-        }
-
 
         function style_NNADD_1_0() {
             return {
