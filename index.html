@@ -8,9 +8,13 @@
         <meta name="apple-mobile-web-app-capable" content="yes">
         <link rel="stylesheet" href="css/leaflet.css">
         <link rel="stylesheet" href="css/L.Control.Layers.Tree.css">
+        <link rel="stylesheet" href="css/L.Control.Locate.min.css">
         <link rel="stylesheet" href="css/qgis2web.css">
         <link rel="stylesheet" href="css/fontawesome-all.min.css">
+        <link rel="stylesheet" href="css/filter.css">
+<link rel="stylesheet" href="css/nouislider.min.css">
         <link rel="stylesheet" href="css/leaflet.photon.css">
+        <link rel="stylesheet" href="css/leaflet-measure.css">
         <style>
         html, body, #map {
             width: 100%;
@@ -27,6 +31,7 @@
         <script src="js/qgis2web_expressions.js"></script>
         <script src="js/leaflet.js"></script>
         <script src="js/L.Control.Layers.Tree.min.js"></script>
+        <script src="js/L.Control.Locate.min.js"></script>
         <script src="js/multi-style-layer.js"></script>
         <script src="js/leaflet.rotatedMarker.js"></script>
         <script src="js/leaflet.pattern.js"></script>
@@ -36,11 +41,15 @@
         <script src="js/labelgun.min.js"></script>
         <script src="js/labels.js"></script>
         <script src="js/leaflet.photon.js"></script>
+        <script src="js/leaflet-measure.js"></script>
+        <script src="js/tailDT.js"></script>
+<script src="js/nouislider.min.js"></script>
+<script src="js/wNumb.js"></script>
         <script src="data/NNADD_1.js"></script>
         <script>
         var map = L.map('map', {
             zoomControl:false, maxZoom:28, minZoom:1
-        }).fitBounds([[14.011509318788544,100.46544317745051],[14.171269075975353,100.73097141525034]]);
+        }).fitBounds([[14.108897960311195,100.59280540253258],[14.128865529454838,100.62599643225894]]);
         var hash = new L.Hash(map);
         map.attributionControl.setPrefix('<a href="https://github.com/tomchadwin/qgis2web" target="_blank">qgis2web</a> &middot; <a href="https://leafletjs.com" title="A JS library for interactive maps">Leaflet</a> &middot; <a href="https://qgis.org">QGIS</a>');
         var autolinker = new Autolinker({truncate: {length: 30, location: 'smart'}});
@@ -108,6 +117,17 @@
         var zoomControl = L.control.zoom({
             position: 'topleft'
         }).addTo(map);
+        L.control.locate({locateOptions: {maxZoom: 19}}).addTo(map);
+        var measureControl = new L.Control.Measure({
+            position: 'topleft',
+            primaryLengthUnit: 'meters',
+            secondaryLengthUnit: 'kilometers',
+            primaryAreaUnit: 'sqmeters',
+            secondaryAreaUnit: 'hectares'
+        });
+        measureControl.addTo(map);
+        document.getElementsByClassName('leaflet-control-measure-toggle')[0].innerHTML = '';
+        document.getElementsByClassName('leaflet-control-measure-toggle')[0].className += ' fas fa-ruler';
         var bounds_group = new L.featureGroup([]);
         function setBounds() {
         }
@@ -127,27 +147,6 @@
         function pop_NNADD_1(feature, layer) {
             var popupContent = '<table>\
                     <tr>\
-                        <td colspan="2">' + (feature.properties['fid'] !== null ? autolinker.link(String(feature.properties['fid']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['photo'] !== null ? '<img src="images/' + String(feature.properties['photo']).replace(/[\\/:]/g, '_').trim().replace(/'/g, '\'').replace(/"/g, '&quot;') + '">' : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['filename'] !== null ? autolinker.link(String(feature.properties['filename']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['directory'] !== null ? '<img src="images/' + String(feature.properties['directory']).replace(/[\\/:]/g, '_').trim().replace(/'/g, '\'').replace(/"/g, '&quot;') + '">' : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['altitude'] !== null ? autolinker.link(String(feature.properties['altitude']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['direction'] !== null ? autolinker.link(String(feature.properties['direction']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['rotation'] !== null ? autolinker.link(String(feature.properties['rotation']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
                         <td colspan="2">' + (feature.properties['longitude'] !== null ? autolinker.link(String(feature.properties['longitude']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
                     </tr>\
                     <tr>\
@@ -157,7 +156,7 @@
                         <td colspan="2">' + (feature.properties['timestamp'] !== null ? autolinker.link(String(feature.properties['timestamp']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
                     </tr>\
                     <tr>\
-                        <td colspan="2">' + (feature.properties['URL'] !== null ? autolinker.link(String(feature.properties['URL']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                        <td colspan="2">' + (feature.properties['URL'] !== null ? '<img src="images/' + String(feature.properties['URL']).replace(/[\\/:]/g, '_').trim().replace(/'/g, '\'').replace(/"/g, '&quot;') + '">' : '') + '</td>\
                     </tr>\
                 </table>';
             var content = removeEmptyRowsFromPopupContent(popupContent, feature);
@@ -216,6 +215,479 @@
         bounds_group.addLayer(layer_NNADD_1);
         map.addLayer(layer_NNADD_1);
         setBounds();
+        var mapDiv = document.getElementById('map');
+        var row = document.createElement('div');
+        row.className="row";
+        row.id="all";
+        row.style.height = "100%";
+        var col1 = document.createElement('div');
+        col1.className="col9";
+        col1.id = "mapWindow";
+        col1.style.height = "99%";
+        col1.style.width = "80%";
+        col1.style.display = "inline-block";
+        var col2 = document.createElement('div');
+        col2.className="col3";
+        col2.id = "menu";
+        col2.style.display = "inline-block";
+        mapDiv.parentNode.insertBefore(row, mapDiv);
+        document.getElementById("all").appendChild(col1);
+        document.getElementById("all").appendChild(col2);
+        col1.appendChild(mapDiv)
+        var Filters = {"URL": "str","latitude": "str"};
+        function filterFunc() {
+          map.eachLayer(function(lyr){
+          if ("options" in lyr && "dataVar" in lyr["options"]){
+            features = this[lyr["options"]["dataVar"]].features.slice(0);
+            try{
+              for (key in Filters){
+                keyS = key.replace(/[^a-zA-Z0-9_]/g, "")
+                if (Filters[key] == "str" || Filters[key] == "bool"){
+                  var selection = [];
+                  var options = document.getElementById("sel_" + keyS).options
+                  for (var i=0; i < options.length; i++) {
+                    if (options[i].selected) selection.push(options[i].value);
+                  }
+                    try{
+                      if (key in features[0].properties){
+                        for (i = features.length - 1;
+                          i >= 0; --i){
+                          if (selection.indexOf(
+                          features[i].properties[key])<0
+                          && selection.length>0) {
+                          features.splice(i,1);
+                          }
+                        }
+                      }
+                    } catch(err){
+                  }
+                }
+                if (Filters[key] == "int"){
+                  sliderVals =  document.getElementById(
+                    "div_" + keyS).noUiSlider.get();
+                  try{
+                    if (key in features[0].properties){
+                    for (i = features.length - 1; i >= 0; --i){
+                      if (parseInt(features[i].properties[key])
+                          < sliderVals[0]
+                          || parseInt(features[i].properties[key])
+                          > sliderVals[1]){
+                            features.splice(i,1);
+                          }
+                        }
+                      }
+                    } catch(err){
+                    }
+                  }
+                if (Filters[key] == "real"){
+                  sliderVals =  document.getElementById(
+                    "div_" + keyS).noUiSlider.get();
+                  try{
+                    if (key in features[0].properties){
+                    for (i = features.length - 1; i >= 0; --i){
+                      if (features[i].properties[key]
+                          < sliderVals[0]
+                          || features[i].properties[key]
+                          > sliderVals[1]){
+                            features.splice(i,1);
+                          }
+                        }
+                      }
+                    } catch(err){
+                    }
+                  }
+                if (Filters[key] == "date"
+                  || Filters[key] == "datetime"
+                  || Filters[key] == "time"){
+                  try{
+                    if (key in features[0].properties){
+                      HTMLkey = key.replace(/[&\/\\#,+()$~%.'":*?<>{} ]/g, '');
+                      startdate = document.getElementById("dat_" +
+                        HTMLkey + "_date1").value.replace(" ", "T");
+                      enddate = document.getElementById("dat_" +
+                        HTMLkey + "_date2").value.replace(" ", "T");
+                      for (i = features.length - 1; i >= 0; --i){
+                        if (features[i].properties[key] < startdate
+                          || features[i].properties[key] > enddate){
+                          features.splice(i,1);
+                        }
+                      }
+                    }
+                  } catch(err){
+                  }
+                }
+              }
+            } catch(err){
+            }
+          this[lyr["options"]["layerName"]].clearLayers();
+          this[lyr["options"]["layerName"]].addData(features);
+          }
+          })
+        }
+            document.getElementById("menu").appendChild(
+                document.createElement("div"));
+            var div_URL = document.createElement('div');
+            div_URL.id = "div_URL";
+            div_URL.className= "filterselect";
+            document.getElementById("menu").appendChild(div_URL);
+            sel_URL = document.createElement('select');
+            sel_URL.multiple = true;
+            sel_URL.size = 10;
+            sel_URL.id = "sel_URL";
+            var URL_options_str = "<option value='' unselected></option>";
+            sel_URL.onchange = function(){filterFunc()};
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1-SkuI2vH6jjKOu_OelgdFXMsuOTMlv7s">https://drive.google.com/uc?id=1-SkuI2vH6jjKOu_OelgdFXMsuOTMlv7s</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1-zG8_xKGwa4ITmyPgAqNNYxrHW2-s2s5">https://drive.google.com/uc?id=1-zG8_xKGwa4ITmyPgAqNNYxrHW2-s2s5</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=10OYn7OJPL-OGujrxOgQBytXT-T8zRZMo">https://drive.google.com/uc?id=10OYn7OJPL-OGujrxOgQBytXT-T8zRZMo</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=10eMlHlzE6QrGBJEZ9_RBKOc1AgA3lAu8">https://drive.google.com/uc?id=10eMlHlzE6QrGBJEZ9_RBKOc1AgA3lAu8</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=10mF7CmA67-2GLYRO4hbjLQ9xVlcRMyQT">https://drive.google.com/uc?id=10mF7CmA67-2GLYRO4hbjLQ9xVlcRMyQT</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=112IZAL_6YPFy4vZb6K4LiqkwO0TSpt_a">https://drive.google.com/uc?id=112IZAL_6YPFy4vZb6K4LiqkwO0TSpt_a</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=11M_5ks2AMCUZhzSj67yZbOFKw20Hu1Nb">https://drive.google.com/uc?id=11M_5ks2AMCUZhzSj67yZbOFKw20Hu1Nb</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=11veRPUTFQGEtIL9Iv3bTkPTLai0heq8a">https://drive.google.com/uc?id=11veRPUTFQGEtIL9Iv3bTkPTLai0heq8a</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=12HW4PYTtqdOSPnQsmGJvH-NyTPxYhNol">https://drive.google.com/uc?id=12HW4PYTtqdOSPnQsmGJvH-NyTPxYhNol</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=12Ke-DTx-IRrIZ1YbgtGVsEAALWmx2FAa">https://drive.google.com/uc?id=12Ke-DTx-IRrIZ1YbgtGVsEAALWmx2FAa</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=12MNTkKPE9aChCuSbMEV1MhcY2ksD-2oO">https://drive.google.com/uc?id=12MNTkKPE9aChCuSbMEV1MhcY2ksD-2oO</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=12WoDIkwZT2htUHQu8EWCPnFM9DAPm0vo">https://drive.google.com/uc?id=12WoDIkwZT2htUHQu8EWCPnFM9DAPm0vo</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=12iUxss4UOqkUYCQXUYYc4gewfbZJ2HMi">https://drive.google.com/uc?id=12iUxss4UOqkUYCQXUYYc4gewfbZJ2HMi</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=12j0PKrFXWt_aSGJW4pO2dmweGX0Cv6pR">https://drive.google.com/uc?id=12j0PKrFXWt_aSGJW4pO2dmweGX0Cv6pR</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=12nhjxFTz18gV6F9TxMXkxy7gvfblzJHZ">https://drive.google.com/uc?id=12nhjxFTz18gV6F9TxMXkxy7gvfblzJHZ</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=13IFc4ECsq8AjGgfxVwvOmEViIHutEP-u">https://drive.google.com/uc?id=13IFc4ECsq8AjGgfxVwvOmEViIHutEP-u</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=13nyPi6BhWztrzoLtPKgyCeL_VNClwXVr">https://drive.google.com/uc?id=13nyPi6BhWztrzoLtPKgyCeL_VNClwXVr</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=13svz2l47rjVEUspeATidkasypks-K8BM">https://drive.google.com/uc?id=13svz2l47rjVEUspeATidkasypks-K8BM</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=13uj6M6j37YeihmwUYhFvWQgAStTxuxI8">https://drive.google.com/uc?id=13uj6M6j37YeihmwUYhFvWQgAStTxuxI8</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=144_QdlDXMeOaJA3Ptanzf0-N3QQW_UmX">https://drive.google.com/uc?id=144_QdlDXMeOaJA3Ptanzf0-N3QQW_UmX</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=148-bJlNJe7yqRHVwf-IAvKksIvyhzvPD">https://drive.google.com/uc?id=148-bJlNJe7yqRHVwf-IAvKksIvyhzvPD</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=14Hw_eJUjhV0ocO_vq1sPl4bv_mhdxUsz">https://drive.google.com/uc?id=14Hw_eJUjhV0ocO_vq1sPl4bv_mhdxUsz</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=14tlC7i8w4F1GmBWaJVYbq1tZ5NS1cl6d">https://drive.google.com/uc?id=14tlC7i8w4F1GmBWaJVYbq1tZ5NS1cl6d</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=15ItFqbjEF5n0xRVnNPN-dGw1cpQaPJLq">https://drive.google.com/uc?id=15ItFqbjEF5n0xRVnNPN-dGw1cpQaPJLq</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=15LRe2cRp65MnwizOGqCGarhzx2UQODcl">https://drive.google.com/uc?id=15LRe2cRp65MnwizOGqCGarhzx2UQODcl</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=15geOnIdj0WGtCHeuu4SF9i54EW-sq-KB">https://drive.google.com/uc?id=15geOnIdj0WGtCHeuu4SF9i54EW-sq-KB</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=15hOVjgKgBGFzHpR1gsiPw0_zfPwNW1KG">https://drive.google.com/uc?id=15hOVjgKgBGFzHpR1gsiPw0_zfPwNW1KG</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=15vHmDsGmAhR41sEBPfLnzhmjmR5Kf4HL">https://drive.google.com/uc?id=15vHmDsGmAhR41sEBPfLnzhmjmR5Kf4HL</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=15yiIQYhsAbOG47Dx2fwELRquE6PAwHyH">https://drive.google.com/uc?id=15yiIQYhsAbOG47Dx2fwELRquE6PAwHyH</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=167jUs6gGf70bBjcXZoCPlAPfEzaaC_hG">https://drive.google.com/uc?id=167jUs6gGf70bBjcXZoCPlAPfEzaaC_hG</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=16C0AmwKl2gQ2J-THj6ZkpuJPYnDsyrWH">https://drive.google.com/uc?id=16C0AmwKl2gQ2J-THj6ZkpuJPYnDsyrWH</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1748_nVe4mqQsgUcTRzGKKLU-YXtwPDb5">https://drive.google.com/uc?id=1748_nVe4mqQsgUcTRzGKKLU-YXtwPDb5</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=174xWnZlwMnuRAuxUa_cJ1k2TmjLK1mBT">https://drive.google.com/uc?id=174xWnZlwMnuRAuxUa_cJ1k2TmjLK1mBT</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1764x-uG2fFuHH9cbpflgH3ioqIQ1RgRB">https://drive.google.com/uc?id=1764x-uG2fFuHH9cbpflgH3ioqIQ1RgRB</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=17dOdaJt-qRZPc_NMCLpNJenbhEmnEr_w">https://drive.google.com/uc?id=17dOdaJt-qRZPc_NMCLpNJenbhEmnEr_w</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=17sGg8AA5YLLcm2lFM1oMkh1jy2SSBSxO">https://drive.google.com/uc?id=17sGg8AA5YLLcm2lFM1oMkh1jy2SSBSxO</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=18K2cH-MWe4g7LV4LHsKhvNR6c3aPXFLL">https://drive.google.com/uc?id=18K2cH-MWe4g7LV4LHsKhvNR6c3aPXFLL</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=18bUoPt9JKMUkxFyAmVqCTi0tCi-7EEQK">https://drive.google.com/uc?id=18bUoPt9JKMUkxFyAmVqCTi0tCi-7EEQK</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=19UCjx9DdO5LcUEnsWbTnSHaClOKOZQ-z">https://drive.google.com/uc?id=19UCjx9DdO5LcUEnsWbTnSHaClOKOZQ-z</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=19ptIxF1PpaSzQrH2rovpUnYsod-Ez7H9">https://drive.google.com/uc?id=19ptIxF1PpaSzQrH2rovpUnYsod-Ez7H9</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=19wBClNToViWXxoq3hjlzMyKKQDxx4fE4">https://drive.google.com/uc?id=19wBClNToViWXxoq3hjlzMyKKQDxx4fE4</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1A_4FXfsUXk70GtFPwdTepglKGcm_ZL59">https://drive.google.com/uc?id=1A_4FXfsUXk70GtFPwdTepglKGcm_ZL59</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1Ao6EUxBAeitxSCjXADMD0_V-Ghbid14D">https://drive.google.com/uc?id=1Ao6EUxBAeitxSCjXADMD0_V-Ghbid14D</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1CG3jGssEUTs2d6zSnjnXK8Wdc1YX1PR5">https://drive.google.com/uc?id=1CG3jGssEUTs2d6zSnjnXK8Wdc1YX1PR5</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1CUrA1o7cSoCPvHE4pSI73DjFfkWkLHjv">https://drive.google.com/uc?id=1CUrA1o7cSoCPvHE4pSI73DjFfkWkLHjv</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1D6K1MzxMuF3sDWbUJVSF_5NZRdHkBNi3">https://drive.google.com/uc?id=1D6K1MzxMuF3sDWbUJVSF_5NZRdHkBNi3</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1Dg5fpMC6_i3htJwkcIZ7kOR5C2JcrxzR">https://drive.google.com/uc?id=1Dg5fpMC6_i3htJwkcIZ7kOR5C2JcrxzR</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1DhLWBxJgg80b9e33hcF2X9AAGH6jBevV">https://drive.google.com/uc?id=1DhLWBxJgg80b9e33hcF2X9AAGH6jBevV</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1EBu2nq2fzb1ByebxPVfzq72GJqIU2P9w">https://drive.google.com/uc?id=1EBu2nq2fzb1ByebxPVfzq72GJqIU2P9w</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1ERXhLGKFfAbNx5g8xtU80R8HMnUo4zpb">https://drive.google.com/uc?id=1ERXhLGKFfAbNx5g8xtU80R8HMnUo4zpb</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1ES-NWNanwPEXFisQKP3ZyWL3iz7TTu7b">https://drive.google.com/uc?id=1ES-NWNanwPEXFisQKP3ZyWL3iz7TTu7b</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1EV1UHPsWBYObmR0jdJ8_5nlP-t3xwB1l">https://drive.google.com/uc?id=1EV1UHPsWBYObmR0jdJ8_5nlP-t3xwB1l</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1Ej-HP1WvspeNbDaH34igNekrTg9hFg1g">https://drive.google.com/uc?id=1Ej-HP1WvspeNbDaH34igNekrTg9hFg1g</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1ExkjcKODhwKt54YF5ozU8nupoo8Mouzw">https://drive.google.com/uc?id=1ExkjcKODhwKt54YF5ozU8nupoo8Mouzw</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1F-7gW6PWrsCNfYmDDsM24n-d9Hn2LVvX">https://drive.google.com/uc?id=1F-7gW6PWrsCNfYmDDsM24n-d9Hn2LVvX</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1F2M9B7ZNfOYnnZ5z4IY3SnjEHtyKjIvH">https://drive.google.com/uc?id=1F2M9B7ZNfOYnnZ5z4IY3SnjEHtyKjIvH</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1FUFQgKRPcZlRkAjQotHXb2xvS_ejZMSK">https://drive.google.com/uc?id=1FUFQgKRPcZlRkAjQotHXb2xvS_ejZMSK</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1F_eXldl2pYrOSM2p67LMLH2RHaxPLt4Y">https://drive.google.com/uc?id=1F_eXldl2pYrOSM2p67LMLH2RHaxPLt4Y</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1FuPRHzIL3T91llT4jbagBhpb0ThRCtHz">https://drive.google.com/uc?id=1FuPRHzIL3T91llT4jbagBhpb0ThRCtHz</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1FxuHWZQcOLLsgADcENoVI9NyOuxanncA">https://drive.google.com/uc?id=1FxuHWZQcOLLsgADcENoVI9NyOuxanncA</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1FymqGpm8p72yllfopQSHZKMCDU5ZLwIw">https://drive.google.com/uc?id=1FymqGpm8p72yllfopQSHZKMCDU5ZLwIw</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1Fz7_kNT3Km-r-1rPM67TAZimbUpnLqsz">https://drive.google.com/uc?id=1Fz7_kNT3Km-r-1rPM67TAZimbUpnLqsz</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1GP7t2iibVOUBs_yJ6oWV-TjHgGUedBvT">https://drive.google.com/uc?id=1GP7t2iibVOUBs_yJ6oWV-TjHgGUedBvT</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1Gl_73RS0HeYmNcEkEQ5I1uqIkF5oMYZQ">https://drive.google.com/uc?id=1Gl_73RS0HeYmNcEkEQ5I1uqIkF5oMYZQ</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1H3NCnpaGoqy_EZiC0nVna3av2yGaiquz">https://drive.google.com/uc?id=1H3NCnpaGoqy_EZiC0nVna3av2yGaiquz</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1HLirzKqNjxsS3WYVwxetPuoBSPLA6zjM">https://drive.google.com/uc?id=1HLirzKqNjxsS3WYVwxetPuoBSPLA6zjM</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1Hn0Q1Rv65X-v_J2UW6v3ZSesQm1FCUNu">https://drive.google.com/uc?id=1Hn0Q1Rv65X-v_J2UW6v3ZSesQm1FCUNu</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1Hn0yWWYSOBq4w6OfE8QOiZpnBmHAxx5h">https://drive.google.com/uc?id=1Hn0yWWYSOBq4w6OfE8QOiZpnBmHAxx5h</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1HpPT9w5GAgfj9a-ymVUS0uKjl0rL3IcB">https://drive.google.com/uc?id=1HpPT9w5GAgfj9a-ymVUS0uKjl0rL3IcB</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1Hz12F3Hr3G3nX8b0sj-yeSwdiFvw-z5P">https://drive.google.com/uc?id=1Hz12F3Hr3G3nX8b0sj-yeSwdiFvw-z5P</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1ISeaXK9MMV0xbnhnFy4sGrnyYaAgBCRm">https://drive.google.com/uc?id=1ISeaXK9MMV0xbnhnFy4sGrnyYaAgBCRm</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1Ia5YdxtfZVYUN4WiscycKKAKJU4Ddlzx">https://drive.google.com/uc?id=1Ia5YdxtfZVYUN4WiscycKKAKJU4Ddlzx</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1IdkhLFzm21Ahavj5Llrm_JpKKaNyVni9">https://drive.google.com/uc?id=1IdkhLFzm21Ahavj5Llrm_JpKKaNyVni9</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1Ig5F2bSephM3lOyV7ZYwK5oCDI3e-VJQ">https://drive.google.com/uc?id=1Ig5F2bSephM3lOyV7ZYwK5oCDI3e-VJQ</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1IpDP82HPcVx3eqkbofj36zd1Gag9ZYy_">https://drive.google.com/uc?id=1IpDP82HPcVx3eqkbofj36zd1Gag9ZYy_</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1JFV011vRcSnuTuTCVVCcKulo_akeq9Wd">https://drive.google.com/uc?id=1JFV011vRcSnuTuTCVVCcKulo_akeq9Wd</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1JgntoO6V-S3HZoogg4ZEu_GXWgBJ1xSm">https://drive.google.com/uc?id=1JgntoO6V-S3HZoogg4ZEu_GXWgBJ1xSm</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1K2P8rMkuD_8hsZj8GAp4ndb2pw72hU1F">https://drive.google.com/uc?id=1K2P8rMkuD_8hsZj8GAp4ndb2pw72hU1F</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1K8vf41Eq4uxQYZ5APfThzGGVnUjrsHPK">https://drive.google.com/uc?id=1K8vf41Eq4uxQYZ5APfThzGGVnUjrsHPK</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1KOfzK_KHI4XaHdKWbJ5Ay3pUUE5PG7ZY">https://drive.google.com/uc?id=1KOfzK_KHI4XaHdKWbJ5Ay3pUUE5PG7ZY</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1KUf7Ba9v5Tue1EwOvluLHciWk1l4Uf7E">https://drive.google.com/uc?id=1KUf7Ba9v5Tue1EwOvluLHciWk1l4Uf7E</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1K_oDdbPLKcTRs0YxIACKkdMeQo04c2ET">https://drive.google.com/uc?id=1K_oDdbPLKcTRs0YxIACKkdMeQo04c2ET</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1L3iSJ2NOVGuFZgMUpykDGf6VypNAyHqy">https://drive.google.com/uc?id=1L3iSJ2NOVGuFZgMUpykDGf6VypNAyHqy</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1LD34_kY-D78z32EOS0kJJ2VOEuNITl2Q">https://drive.google.com/uc?id=1LD34_kY-D78z32EOS0kJJ2VOEuNITl2Q</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1LkfqoHL8Gb-lM8F81YJ9mNx1o0rrkSX0">https://drive.google.com/uc?id=1LkfqoHL8Gb-lM8F81YJ9mNx1o0rrkSX0</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1Ly7ySS1-j4W05yrZLw-paG03ZJljAqAi">https://drive.google.com/uc?id=1Ly7ySS1-j4W05yrZLw-paG03ZJljAqAi</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1MdbrfBIiJD8pDAa2wCK6IGWR7ErJsENF">https://drive.google.com/uc?id=1MdbrfBIiJD8pDAa2wCK6IGWR7ErJsENF</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1MeJckIfTmGKH61kZ48hKuZwbNncI7zAu">https://drive.google.com/uc?id=1MeJckIfTmGKH61kZ48hKuZwbNncI7zAu</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1NSSIlnq7od1VEmYrczIk9g7Vqkvd0LJR">https://drive.google.com/uc?id=1NSSIlnq7od1VEmYrczIk9g7Vqkvd0LJR</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1NdDZOBDHgAE4RubXx___ErM5VOq1ZZpa">https://drive.google.com/uc?id=1NdDZOBDHgAE4RubXx___ErM5VOq1ZZpa</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1OA7NHnDEUrqaj1bhsavbN2VuQ6iyMOD0">https://drive.google.com/uc?id=1OA7NHnDEUrqaj1bhsavbN2VuQ6iyMOD0</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1OhLF5vWgaqB3N3LP_hgWSVZR6FHMgA1P">https://drive.google.com/uc?id=1OhLF5vWgaqB3N3LP_hgWSVZR6FHMgA1P</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1P0FBRb-hhWTUrWNf4WZlzdGwefVyebc0">https://drive.google.com/uc?id=1P0FBRb-hhWTUrWNf4WZlzdGwefVyebc0</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1P1UlX2Q_ol0aPPbHbqlMdgPNWNXqQ60q">https://drive.google.com/uc?id=1P1UlX2Q_ol0aPPbHbqlMdgPNWNXqQ60q</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1P4gjP_d6KJfY0UByChDI5fPMyN0-Sxm9">https://drive.google.com/uc?id=1P4gjP_d6KJfY0UByChDI5fPMyN0-Sxm9</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1P931bB6wqpUF3UrRLmVoXFIPiLTKfVTc">https://drive.google.com/uc?id=1P931bB6wqpUF3UrRLmVoXFIPiLTKfVTc</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1PHjlca-dr0LHW4hVqfMVqnkr_zZ_naWX">https://drive.google.com/uc?id=1PHjlca-dr0LHW4hVqfMVqnkr_zZ_naWX</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1P_UhCAw_7cT_Dg8_pVSuvvysGmzdkjXt">https://drive.google.com/uc?id=1P_UhCAw_7cT_Dg8_pVSuvvysGmzdkjXt</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1Pzk_9KYyJY5tyUROgx2NiDTAK0PTyeIi">https://drive.google.com/uc?id=1Pzk_9KYyJY5tyUROgx2NiDTAK0PTyeIi</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1Q1XmCA7w9-91qyNIpdoIqU8jbVRIXOKI">https://drive.google.com/uc?id=1Q1XmCA7w9-91qyNIpdoIqU8jbVRIXOKI</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1QB9hCoBi7SQyotrfKoBteUU-ZuSB4fDy">https://drive.google.com/uc?id=1QB9hCoBi7SQyotrfKoBteUU-ZuSB4fDy</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1Qks6SgUXNMfS1LhOhqR8-qjYayhkROHG">https://drive.google.com/uc?id=1Qks6SgUXNMfS1LhOhqR8-qjYayhkROHG</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1Qq_nICDC54Z1rHIi_MkIiMxomrCl_yyk">https://drive.google.com/uc?id=1Qq_nICDC54Z1rHIi_MkIiMxomrCl_yyk</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1Qrg8Ye8E219G1EQ3IyT8o2tb6LDzZCOP">https://drive.google.com/uc?id=1Qrg8Ye8E219G1EQ3IyT8o2tb6LDzZCOP</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1QtXEf8nilt6Kim1W3ugqAfyljt6H4RLA">https://drive.google.com/uc?id=1QtXEf8nilt6Kim1W3ugqAfyljt6H4RLA</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1QtX_Q5dQeQK1D3_dMR7QWfFy507wf5ld">https://drive.google.com/uc?id=1QtX_Q5dQeQK1D3_dMR7QWfFy507wf5ld</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1RDeZNNb56TC0TpMAF-cJyqLjxvTbJL6m">https://drive.google.com/uc?id=1RDeZNNb56TC0TpMAF-cJyqLjxvTbJL6m</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1SXKsdwdUuDn4UdSn5-dBDBEtM_yqggeF">https://drive.google.com/uc?id=1SXKsdwdUuDn4UdSn5-dBDBEtM_yqggeF</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1SgK1Su9yKQ3F-G0e3Gl2kUMGjyzN6Fs_">https://drive.google.com/uc?id=1SgK1Su9yKQ3F-G0e3Gl2kUMGjyzN6Fs_</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1SqPAIFgoi4WW_v-82AtQQFQGKoKD6bfs">https://drive.google.com/uc?id=1SqPAIFgoi4WW_v-82AtQQFQGKoKD6bfs</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1TAjKnJ96p2FbVSNeyDhoiK1oIKLbC3A8">https://drive.google.com/uc?id=1TAjKnJ96p2FbVSNeyDhoiK1oIKLbC3A8</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1TQKOxplrJXnEtwUNE0xE1OhUpYJTSA62">https://drive.google.com/uc?id=1TQKOxplrJXnEtwUNE0xE1OhUpYJTSA62</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1T_dbEW1ZbboZ_McJo2RN92hJjIM-k-wg">https://drive.google.com/uc?id=1T_dbEW1ZbboZ_McJo2RN92hJjIM-k-wg</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1U98bzk1q6o9wY-QsubB6N1iwmlonCnGP">https://drive.google.com/uc?id=1U98bzk1q6o9wY-QsubB6N1iwmlonCnGP</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1US4LkVKoAwo6dscYtkGRYjpHWWLPmlDH">https://drive.google.com/uc?id=1US4LkVKoAwo6dscYtkGRYjpHWWLPmlDH</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1UVO3zdgh_KcCSvlZBRRF93ZB1JdJNqhd">https://drive.google.com/uc?id=1UVO3zdgh_KcCSvlZBRRF93ZB1JdJNqhd</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1UliYbAoi8U9t9pBJJLMJjURxMIGYhZ-B">https://drive.google.com/uc?id=1UliYbAoi8U9t9pBJJLMJjURxMIGYhZ-B</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1Uz2XfrvizNw5eJi13OjwrTs8zU0Ldv75">https://drive.google.com/uc?id=1Uz2XfrvizNw5eJi13OjwrTs8zU0Ldv75</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1VMnyicNpRqYjZIokaRF6lIdTETMRHSYR">https://drive.google.com/uc?id=1VMnyicNpRqYjZIokaRF6lIdTETMRHSYR</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1W6KzKMY2lM7UwKLYCvoD-hhtDSdGQRqG">https://drive.google.com/uc?id=1W6KzKMY2lM7UwKLYCvoD-hhtDSdGQRqG</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1WSBLuyJvlIoSDaSXSH1r8eHxoYgfZU-O">https://drive.google.com/uc?id=1WSBLuyJvlIoSDaSXSH1r8eHxoYgfZU-O</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1WVcjHZvo9U7ADic0S4KA-pRh-veE-6rR">https://drive.google.com/uc?id=1WVcjHZvo9U7ADic0S4KA-pRh-veE-6rR</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1WdeMztPgra54bGH7GidNnvZvZiQEOOBz">https://drive.google.com/uc?id=1WdeMztPgra54bGH7GidNnvZvZiQEOOBz</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1WuLU8j1pPxXRN_8ON10PDCbfkOSHU6iy">https://drive.google.com/uc?id=1WuLU8j1pPxXRN_8ON10PDCbfkOSHU6iy</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1X8pTo_lifHH4BKDRPCtaBMs0JOEJcpEb">https://drive.google.com/uc?id=1X8pTo_lifHH4BKDRPCtaBMs0JOEJcpEb</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1Xr5S6pFsrH-98nqelq_0vlAqxZqVzVmW">https://drive.google.com/uc?id=1Xr5S6pFsrH-98nqelq_0vlAqxZqVzVmW</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1YqVBv1vJ7iW_yJOuyxsYYhoP5gfrb4BL">https://drive.google.com/uc?id=1YqVBv1vJ7iW_yJOuyxsYYhoP5gfrb4BL</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1YrzlkzBbsAE_hSMpYTJ-ATgBKJroIIpU">https://drive.google.com/uc?id=1YrzlkzBbsAE_hSMpYTJ-ATgBKJroIIpU</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1ZCsMQWeoHtnihmTpe4OT9xi2s5ApLqKF">https://drive.google.com/uc?id=1ZCsMQWeoHtnihmTpe4OT9xi2s5ApLqKF</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1ZaeOc8a_bdVjYP2pp7SPe6i9jAbBw5Qa">https://drive.google.com/uc?id=1ZaeOc8a_bdVjYP2pp7SPe6i9jAbBw5Qa</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1ZyZyGt0mHbspNtONE1TH4FhRyt0Ae4uu">https://drive.google.com/uc?id=1ZyZyGt0mHbspNtONE1TH4FhRyt0Ae4uu</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1_1W856WF7sEZReFx3ECUCx6wJpq2WsZ6">https://drive.google.com/uc?id=1_1W856WF7sEZReFx3ECUCx6wJpq2WsZ6</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1_3c88bIM1vqs2DjbqyAEHsisLJpuNAAj">https://drive.google.com/uc?id=1_3c88bIM1vqs2DjbqyAEHsisLJpuNAAj</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1_3ljI-gW81qBLdbYlMO4Zke1CAwjPRBq">https://drive.google.com/uc?id=1_3ljI-gW81qBLdbYlMO4Zke1CAwjPRBq</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1_R2dvxEO_9wO9KY_dTKaeyaEx-QHz75f">https://drive.google.com/uc?id=1_R2dvxEO_9wO9KY_dTKaeyaEx-QHz75f</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1_kzJ6mah0xqrhx8b-A5B-mNXdFXgJdPM">https://drive.google.com/uc?id=1_kzJ6mah0xqrhx8b-A5B-mNXdFXgJdPM</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1aU9GutQIrQEor3SiIyaCqrx797ueJ9H4">https://drive.google.com/uc?id=1aU9GutQIrQEor3SiIyaCqrx797ueJ9H4</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1aVO-4dyVVoC4CHFRUFYpWIsr9mPqebXN">https://drive.google.com/uc?id=1aVO-4dyVVoC4CHFRUFYpWIsr9mPqebXN</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1aXkHDtsQh_wYC_owMuSjnyOCJrUhF4LN">https://drive.google.com/uc?id=1aXkHDtsQh_wYC_owMuSjnyOCJrUhF4LN</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1akampsmHvF0AQA9U-9hnm8MVP5AK18OF">https://drive.google.com/uc?id=1akampsmHvF0AQA9U-9hnm8MVP5AK18OF</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1b2N8S7Dv0jovAjJ5L3HBZMW7nfweDNH4">https://drive.google.com/uc?id=1b2N8S7Dv0jovAjJ5L3HBZMW7nfweDNH4</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1bDuuf9nPfOm8XfbxtIbmOTpJbUpmo5i0">https://drive.google.com/uc?id=1bDuuf9nPfOm8XfbxtIbmOTpJbUpmo5i0</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1bQvfZN12d5kCqRam6yG9XzmJx4utcxV9">https://drive.google.com/uc?id=1bQvfZN12d5kCqRam6yG9XzmJx4utcxV9</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1b_0bOUW9_hs5ogrzvnk7QcBNsQw_IODa">https://drive.google.com/uc?id=1b_0bOUW9_hs5ogrzvnk7QcBNsQw_IODa</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1bbsxg11cXu05xP8_gCym29y06Ox9pw_N">https://drive.google.com/uc?id=1bbsxg11cXu05xP8_gCym29y06Ox9pw_N</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1cvkruW2CkaAtlr-L0QkghFXakIoYXP0N">https://drive.google.com/uc?id=1cvkruW2CkaAtlr-L0QkghFXakIoYXP0N</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1dGT3lf-gxwBSVamq15qcpmj5l0BGaoSB">https://drive.google.com/uc?id=1dGT3lf-gxwBSVamq15qcpmj5l0BGaoSB</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1da3GGvqXexKK2pqmSG7yOXOGSLpTFH5g">https://drive.google.com/uc?id=1da3GGvqXexKK2pqmSG7yOXOGSLpTFH5g</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1erecsjk2EYJQ19wpJNoFx5kIZ-NNbdyo">https://drive.google.com/uc?id=1erecsjk2EYJQ19wpJNoFx5kIZ-NNbdyo</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1fH3XwPpvQ7Kb28pLiuNsQdOVbfxiNrwn">https://drive.google.com/uc?id=1fH3XwPpvQ7Kb28pLiuNsQdOVbfxiNrwn</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1fQnp3PcvYvgXORM0ZvMV37Ia4SdgETfv">https://drive.google.com/uc?id=1fQnp3PcvYvgXORM0ZvMV37Ia4SdgETfv</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1fSAziKUYGTCQqSnbUoLptCQac9VZlOvG">https://drive.google.com/uc?id=1fSAziKUYGTCQqSnbUoLptCQac9VZlOvG</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1gAXT2EpiB6OMFvSEbv-aJIaNgcUu9etL">https://drive.google.com/uc?id=1gAXT2EpiB6OMFvSEbv-aJIaNgcUu9etL</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1gGVOmF1508cLtcLmTya1GJhRw8MIObml">https://drive.google.com/uc?id=1gGVOmF1508cLtcLmTya1GJhRw8MIObml</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1gRIZTcgnDN8xIr2oKzrl0xKBpEeEqT66">https://drive.google.com/uc?id=1gRIZTcgnDN8xIr2oKzrl0xKBpEeEqT66</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1g_ZuYEHKkGwF-eX4a5Ko_8onPYEECnCq">https://drive.google.com/uc?id=1g_ZuYEHKkGwF-eX4a5Ko_8onPYEECnCq</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1gvfwb2j4od06X_qRcszIrT-1J1juZMJF">https://drive.google.com/uc?id=1gvfwb2j4od06X_qRcszIrT-1J1juZMJF</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1hA_AyO-RNo2TDGvvdPcHMjalc_IgsdEw">https://drive.google.com/uc?id=1hA_AyO-RNo2TDGvvdPcHMjalc_IgsdEw</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1hHqwVwg_eSKHUAmi0pTsSM6u8lUjAMzP">https://drive.google.com/uc?id=1hHqwVwg_eSKHUAmi0pTsSM6u8lUjAMzP</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1hlbFevoxSNCs8uTXm-8a6YKKqTLB-0_l">https://drive.google.com/uc?id=1hlbFevoxSNCs8uTXm-8a6YKKqTLB-0_l</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1ht5QHPvZ-ZvNQQQQY1hBY9py8zxdZ3rL">https://drive.google.com/uc?id=1ht5QHPvZ-ZvNQQQQY1hBY9py8zxdZ3rL</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1hxpj4_uhygH7Cz1aXTgZf7lYj53u3Btk">https://drive.google.com/uc?id=1hxpj4_uhygH7Cz1aXTgZf7lYj53u3Btk</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1i4MUpru6c8EsyKkVrLTusMdr9EmLCCGA">https://drive.google.com/uc?id=1i4MUpru6c8EsyKkVrLTusMdr9EmLCCGA</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1iJZPtgkqoyNKTpmxLJ3bpg94-SiLfH-E">https://drive.google.com/uc?id=1iJZPtgkqoyNKTpmxLJ3bpg94-SiLfH-E</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1iVuWb492mfsfohmhmiSS-99bTpBXumHX">https://drive.google.com/uc?id=1iVuWb492mfsfohmhmiSS-99bTpBXumHX</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1j_oGwF7X-syQf5FIim63bNNAu9208hdw">https://drive.google.com/uc?id=1j_oGwF7X-syQf5FIim63bNNAu9208hdw</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1jfeiHiuDmUs_fey0wqDA2GfTSW6MCOb4">https://drive.google.com/uc?id=1jfeiHiuDmUs_fey0wqDA2GfTSW6MCOb4</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1jq7kMJgmvCI8Sfzgru_8qf1sZZaNPoMf">https://drive.google.com/uc?id=1jq7kMJgmvCI8Sfzgru_8qf1sZZaNPoMf</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1kd82EsyazU41wXjOEqqhOK8FT3xIXLMI">https://drive.google.com/uc?id=1kd82EsyazU41wXjOEqqhOK8FT3xIXLMI</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1kgXsbWiGD7A2zwV3lbZoh-fD8W_Tygda">https://drive.google.com/uc?id=1kgXsbWiGD7A2zwV3lbZoh-fD8W_Tygda</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1l1L4FUq12mmJB4ZbI4aLOKEs02XDhtvo">https://drive.google.com/uc?id=1l1L4FUq12mmJB4ZbI4aLOKEs02XDhtvo</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1lg9KZoCDa2obQ0g4KBqOr-MrQ3vG3V7r">https://drive.google.com/uc?id=1lg9KZoCDa2obQ0g4KBqOr-MrQ3vG3V7r</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1lkoW11avxMf18hWZll0_NtmXXi2vHdsr">https://drive.google.com/uc?id=1lkoW11avxMf18hWZll0_NtmXXi2vHdsr</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1llF2uhP-qSd2ERBaHEM8tqyZuv5xsntn">https://drive.google.com/uc?id=1llF2uhP-qSd2ERBaHEM8tqyZuv5xsntn</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1lszET1cx1X7dDU0N_bXlhS54ZQ3BLKVw">https://drive.google.com/uc?id=1lszET1cx1X7dDU0N_bXlhS54ZQ3BLKVw</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1lu-O9COkUiuAaHOEJ68D9ATQWTnubUPu">https://drive.google.com/uc?id=1lu-O9COkUiuAaHOEJ68D9ATQWTnubUPu</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1m3E5FzOL_3g_C_VrKAHPeHN6hHGflS_6">https://drive.google.com/uc?id=1m3E5FzOL_3g_C_VrKAHPeHN6hHGflS_6</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1mQv_E686KCEuqy1w91hV1-KL2YfJUsVp">https://drive.google.com/uc?id=1mQv_E686KCEuqy1w91hV1-KL2YfJUsVp</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1mrgSf3XZrNhwyH9lhDdmnde4XTh1GBUi">https://drive.google.com/uc?id=1mrgSf3XZrNhwyH9lhDdmnde4XTh1GBUi</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1mt0XwrLvT-i42WTcpgkXyumUN9KMcddq">https://drive.google.com/uc?id=1mt0XwrLvT-i42WTcpgkXyumUN9KMcddq</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1mwdXYsFKnlKP4NKh4hH528-VZzwltEdH">https://drive.google.com/uc?id=1mwdXYsFKnlKP4NKh4hH528-VZzwltEdH</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1nFscQZOve-qOxkhx0QSQqAlrb9nqgAD9">https://drive.google.com/uc?id=1nFscQZOve-qOxkhx0QSQqAlrb9nqgAD9</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1nH5Rre4do0nZpIxXvjko98XB1lXNxagf">https://drive.google.com/uc?id=1nH5Rre4do0nZpIxXvjko98XB1lXNxagf</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1nJ0inrgirwT12McvVCYZpFBia2obeHzi">https://drive.google.com/uc?id=1nJ0inrgirwT12McvVCYZpFBia2obeHzi</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1nTMTYKYk7ksaLl1W00pqy4OYzPC2IuaD">https://drive.google.com/uc?id=1nTMTYKYk7ksaLl1W00pqy4OYzPC2IuaD</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1n_uNMlXCNaanPyQqB6rB6OmzSw96cwNK">https://drive.google.com/uc?id=1n_uNMlXCNaanPyQqB6rB6OmzSw96cwNK</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1ng6mQNEFC6eeBh4EwZDGnpom8Bn2npqw">https://drive.google.com/uc?id=1ng6mQNEFC6eeBh4EwZDGnpom8Bn2npqw</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1nmm9k4g0OXd8oy7QNjSKn3FIzNyDcpgd">https://drive.google.com/uc?id=1nmm9k4g0OXd8oy7QNjSKn3FIzNyDcpgd</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1noBr--w0CN3SQKy50slzDO0_E5REeoS3">https://drive.google.com/uc?id=1noBr--w0CN3SQKy50slzDO0_E5REeoS3</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1o0DD9YUuFjjKtgHa1HPs-Kao2eDNnsGS">https://drive.google.com/uc?id=1o0DD9YUuFjjKtgHa1HPs-Kao2eDNnsGS</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1o0Z9dyNyb9t396pxLaHEwdzUFMwbScqk">https://drive.google.com/uc?id=1o0Z9dyNyb9t396pxLaHEwdzUFMwbScqk</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1oECOBmmbkkNfyLVXe2BZh_PygeD3bkBl">https://drive.google.com/uc?id=1oECOBmmbkkNfyLVXe2BZh_PygeD3bkBl</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1pVIRNNNjfgNCSuk0usym8lj5LIph-h5e">https://drive.google.com/uc?id=1pVIRNNNjfgNCSuk0usym8lj5LIph-h5e</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1pnSK7Spx7YCdGq8vuVdi8F0z_nMtEnb2">https://drive.google.com/uc?id=1pnSK7Spx7YCdGq8vuVdi8F0z_nMtEnb2</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1qPJy0NT82DuxlwmH2lQyTGGH2aGJrJr8">https://drive.google.com/uc?id=1qPJy0NT82DuxlwmH2lQyTGGH2aGJrJr8</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1qxhEQc250SdiHtTPECFz2oNuPXsNB-IP">https://drive.google.com/uc?id=1qxhEQc250SdiHtTPECFz2oNuPXsNB-IP</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1rrymrUezdZ0IXo_LyKxNU4RENyuAt3be">https://drive.google.com/uc?id=1rrymrUezdZ0IXo_LyKxNU4RENyuAt3be</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1s31E3myOOakCM6OyNdQAHkDKyBL_OLYE">https://drive.google.com/uc?id=1s31E3myOOakCM6OyNdQAHkDKyBL_OLYE</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1sSf6nfnXWJ2cxxQsy1TQOux6IVdhJGts">https://drive.google.com/uc?id=1sSf6nfnXWJ2cxxQsy1TQOux6IVdhJGts</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1sYLNRx5p6GNa5YMzXxo6go1CueZ6Z22a">https://drive.google.com/uc?id=1sYLNRx5p6GNa5YMzXxo6go1CueZ6Z22a</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1seFdI6ij-RO-jRnZXMJCjgNQWMfgyD1O">https://drive.google.com/uc?id=1seFdI6ij-RO-jRnZXMJCjgNQWMfgyD1O</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1sfc67J16M3VqzSx8DvF2Mwu3E6rqXiwg">https://drive.google.com/uc?id=1sfc67J16M3VqzSx8DvF2Mwu3E6rqXiwg</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1t0z5bQ1ygsSVFOibkqR0CnWOEtPE0km7">https://drive.google.com/uc?id=1t0z5bQ1ygsSVFOibkqR0CnWOEtPE0km7</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1t5csDOFMsF77O3BKDETwniz0G8RB8LDU">https://drive.google.com/uc?id=1t5csDOFMsF77O3BKDETwniz0G8RB8LDU</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1tF65poAFIj6Gzfk8TZ2aK2z_EzafI00q">https://drive.google.com/uc?id=1tF65poAFIj6Gzfk8TZ2aK2z_EzafI00q</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1tvyKwHWJW8VXOJTDfBVyc3STCTs5KJRY">https://drive.google.com/uc?id=1tvyKwHWJW8VXOJTDfBVyc3STCTs5KJRY</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1uDVVSXyVrDbFkheHe5P8rND6RTYoKBYn">https://drive.google.com/uc?id=1uDVVSXyVrDbFkheHe5P8rND6RTYoKBYn</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1uSkP_TPX4nF-HsCrHDR2ycuz_vAC7X1x">https://drive.google.com/uc?id=1uSkP_TPX4nF-HsCrHDR2ycuz_vAC7X1x</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1vIMNAT1dr6RG6fcER72NKSZ-mWtQXRri">https://drive.google.com/uc?id=1vIMNAT1dr6RG6fcER72NKSZ-mWtQXRri</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1wZSv7bEj4x-P1wrsj-h8r88SjE6vm_X7">https://drive.google.com/uc?id=1wZSv7bEj4x-P1wrsj-h8r88SjE6vm_X7</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1wdR-YBuN4DYH1wYfBgRH7VHim-JpapJJ">https://drive.google.com/uc?id=1wdR-YBuN4DYH1wYfBgRH7VHim-JpapJJ</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1x0WMhugmZLJ1s5Wd_rirU6f4pK3MPN2A">https://drive.google.com/uc?id=1x0WMhugmZLJ1s5Wd_rirU6f4pK3MPN2A</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1x8ezbaQYHp0klBYRmv9Wv_9QVA-GYtxO">https://drive.google.com/uc?id=1x8ezbaQYHp0klBYRmv9Wv_9QVA-GYtxO</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1xNQJccGUQ8doAGQ-9TVhL2scS4ocj19y">https://drive.google.com/uc?id=1xNQJccGUQ8doAGQ-9TVhL2scS4ocj19y</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1xbQs51qH8hoB_potY1R1FvWElhDQxV-1">https://drive.google.com/uc?id=1xbQs51qH8hoB_potY1R1FvWElhDQxV-1</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1xlICU6KU8V3yp48uF6nOvlQeSNJj5JrQ">https://drive.google.com/uc?id=1xlICU6KU8V3yp48uF6nOvlQeSNJj5JrQ</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1xraySjzb855fV5BUfCkWToQ6gHe3kTi-">https://drive.google.com/uc?id=1xraySjzb855fV5BUfCkWToQ6gHe3kTi-</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1yHQDUhSQxM5A5SadI2IfBs_kMq139N8h">https://drive.google.com/uc?id=1yHQDUhSQxM5A5SadI2IfBs_kMq139N8h</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1z54L0h6fpTtkohXH-7J324cfFhEG9JP-">https://drive.google.com/uc?id=1z54L0h6fpTtkohXH-7J324cfFhEG9JP-</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1z8UHaF2XhtwUJauiOFwFPkbPeTG1gr_q">https://drive.google.com/uc?id=1z8UHaF2XhtwUJauiOFwFPkbPeTG1gr_q</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1zM4dkrnw2ALwBK-Blp9FUpAgyLsiGwle">https://drive.google.com/uc?id=1zM4dkrnw2ALwBK-Blp9FUpAgyLsiGwle</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1zcJ7VQNGT_Llnjegg7EBEpqDBr_D5rDF">https://drive.google.com/uc?id=1zcJ7VQNGT_Llnjegg7EBEpqDBr_D5rDF</option>';
+            URL_options_str  += '<option value="https://drive.google.com/uc?id=1zq1ralncHy3fYpoltq1mQEdtR7iMdjtG">https://drive.google.com/uc?id=1zq1ralncHy3fYpoltq1mQEdtR7iMdjtG</option>';
+            sel_URL.innerHTML = URL_options_str;
+            div_URL.appendChild(sel_URL);
+            var lab_URL = document.createElement('div');
+            lab_URL.innerHTML = 'URL';
+            lab_URL.className = 'filterlabel';
+            div_URL.appendChild(lab_URL);
+            var reset_URL = document.createElement('div');
+            reset_URL.innerHTML = 'clear filter';
+            reset_URL.className = 'filterlabel';
+            reset_URL.onclick = function() {
+                var options = document.getElementById("sel_URL").options;
+                for (var i=0; i < options.length; i++) {
+                    options[i].selected = false;
+                }
+                filterFunc();
+            };
+            div_URL.appendChild(reset_URL);
+            document.getElementById("menu").appendChild(
+                document.createElement("div"));
+            var div_latitude = document.createElement('div');
+            div_latitude.id = "div_latitude";
+            div_latitude.className= "filterselect";
+            document.getElementById("menu").appendChild(div_latitude);
+            sel_latitude = document.createElement('select');
+            sel_latitude.multiple = true;
+            sel_latitude.size = 10;
+            sel_latitude.id = "sel_latitude";
+            var latitude_options_str = "<option value='' unselected></option>";
+            sel_latitude.onchange = function(){filterFunc()};
+            latitude_options_str  += '<option value="14.071358333333333">14.071358333333333</option>';
+            latitude_options_str  += '<option value="14.085166666666668">14.085166666666668</option>';
+            latitude_options_str  += '<option value="14.085269444444444">14.085269444444444</option>';
+            latitude_options_str  += '<option value="14.085572222222222">14.085572222222222</option>';
+            latitude_options_str  += '<option value="14.092811111111113">14.092811111111113</option>';
+            latitude_options_str  += '<option value="14.093319444444445">14.093319444444445</option>';
+            latitude_options_str  += '<option value="14.093327777777779">14.093327777777779</option>';
+            latitude_options_str  += '<option value="14.093405555555556">14.093405555555556</option>';
+            latitude_options_str  += '<option value="14.093422222222223">14.093422222222223</option>';
+            latitude_options_str  += '<option value="14.093447222222222">14.093447222222222</option>';
+            latitude_options_str  += '<option value="14.09348888888889">14.09348888888889</option>';
+            latitude_options_str  += '<option value="14.109080555555556">14.109080555555556</option>';
+            latitude_options_str  += '<option value="14.110713888888888">14.110713888888888</option>';
+            latitude_options_str  += '<option value="14.110772222222222">14.110772222222222</option>';
+            latitude_options_str  += '<option value="14.110872222222222">14.110872222222222</option>';
+            latitude_options_str  += '<option value="14.110975">14.110975</option>';
+            latitude_options_str  += '<option value="14.11098611111111">14.11098611111111</option>';
+            latitude_options_str  += '<option value="14.111008333333332">14.111008333333332</option>';
+            latitude_options_str  += '<option value="14.111213888888889">14.111213888888889</option>';
+            latitude_options_str  += '<option value="14.111394444444445">14.111394444444445</option>';
+            latitude_options_str  += '<option value="14.113016666666667">14.113016666666667</option>';
+            latitude_options_str  += '<option value="14.113052777777778">14.113052777777778</option>';
+            latitude_options_str  += '<option value="14.113588888888888">14.113588888888888</option>';
+            latitude_options_str  += '<option value="14.11366111111111">14.11366111111111</option>';
+            latitude_options_str  += '<option value="14.113691666666666">14.113691666666666</option>';
+            latitude_options_str  += '<option value="14.121097222222224">14.121097222222224</option>';
+            latitude_options_str  += '<option value="14.12151388888889">14.12151388888889</option>';
+            latitude_options_str  += '<option value="14.121516666666666">14.121516666666666</option>';
+            latitude_options_str  += '<option value="14.121591666666667">14.121591666666667</option>';
+            latitude_options_str  += '<option value="14.144797222222222">14.144797222222222</option>';
+            latitude_options_str  += '<option value="14.145030555555556">14.145030555555556</option>';
+            latitude_options_str  += '<option value="14.145044444444444">14.145044444444444</option>';
+            latitude_options_str  += '<option value="14.14528611111111">14.14528611111111</option>';
+            latitude_options_str  += '<option value="14.145319444444445">14.145319444444445</option>';
+            latitude_options_str  += '<option value="14.146016666666666">14.146016666666666</option>';
+            latitude_options_str  += '<option value="14.147466666666666">14.147466666666666</option>';
+            latitude_options_str  += '<option value="14.149969444444444">14.149969444444444</option>';
+            latitude_options_str  += '<option value="14.149997222222222">14.149997222222222</option>';
+            latitude_options_str  += '<option value="14.15005">14.15005</option>';
+            latitude_options_str  += '<option value="14.150108333333334">14.150108333333334</option>';
+            latitude_options_str  += '<option value="14.150122222222222">14.150122222222222</option>';
+            latitude_options_str  += '<option value="14.150216666666667">14.150216666666667</option>';
+            latitude_options_str  += '<option value="14.150233333333334">14.150233333333334</option>';
+            latitude_options_str  += '<option value="14.150241666666666">14.150241666666666</option>';
+            latitude_options_str  += '<option value="14.150266666666667">14.150266666666667</option>';
+            latitude_options_str  += '<option value="14.150302777777778">14.150302777777778</option>';
+            latitude_options_str  += '<option value="14.150305555555557">14.150305555555557</option>';
+            latitude_options_str  += '<option value="14.150308333333333">14.150308333333333</option>';
+            latitude_options_str  += '<option value="14.150330555555556">14.150330555555556</option>';
+            latitude_options_str  += '<option value="14.150333333333334">14.150333333333334</option>';
+            latitude_options_str  += '<option value="14.15033611111111">14.15033611111111</option>';
+            latitude_options_str  += '<option value="14.150352777777778">14.150352777777778</option>';
+            latitude_options_str  += '<option value="14.150380555555556">14.150380555555556</option>';
+            latitude_options_str  += '<option value="14.150383333333334">14.150383333333334</option>';
+            latitude_options_str  += '<option value="14.15038611111111">14.15038611111111</option>';
+            latitude_options_str  += '<option value="14.150425">14.150425</option>';
+            latitude_options_str  += '<option value="14.150438888888889">14.150438888888889</option>';
+            latitude_options_str  += '<option value="14.150472222222223">14.150472222222223</option>';
+            latitude_options_str  += '<option value="14.150511111111111">14.150511111111111</option>';
+            latitude_options_str  += '<option value="14.150519444444445">14.150519444444445</option>';
+            latitude_options_str  += '<option value="14.150547222222222">14.150547222222222</option>';
+            latitude_options_str  += '<option value="14.15055">14.15055</option>';
+            latitude_options_str  += '<option value="14.150558333333334">14.150558333333334</option>';
+            latitude_options_str  += '<option value="14.150575">14.150575</option>';
+            latitude_options_str  += '<option value="14.150616666666666">14.150616666666666</option>';
+            latitude_options_str  += '<option value="14.150644444444445">14.150644444444445</option>';
+            latitude_options_str  += '<option value="14.150672222222223">14.150672222222223</option>';
+            latitude_options_str  += '<option value="14.150705555555556">14.150705555555556</option>';
+            latitude_options_str  += '<option value="14.150708333333334">14.150708333333334</option>';
+            latitude_options_str  += '<option value="14.150752777777779">14.150752777777779</option>';
+            latitude_options_str  += '<option value="14.150786111111112">14.150786111111112</option>';
+            latitude_options_str  += '<option value="14.150816666666667">14.150816666666667</option>';
+            latitude_options_str  += '<option value="14.150830555555556">14.150830555555556</option>';
+            latitude_options_str  += '<option value="14.150833333333333">14.150833333333333</option>';
+            latitude_options_str  += '<option value="14.150902777777778">14.150902777777778</option>';
+            latitude_options_str  += '<option value="14.150930555555556">14.150930555555556</option>';
+            latitude_options_str  += '<option value="14.150933333333334">14.150933333333334</option>';
+            latitude_options_str  += '<option value="14.15113888888889">14.15113888888889</option>';
+            latitude_options_str  += '<option value="14.151177777777779">14.151177777777779</option>';
+            latitude_options_str  += '<option value="14.151238888888889">14.151238888888889</option>';
+            latitude_options_str  += '<option value="14.154366666666666">14.154366666666666</option>';
+            latitude_options_str  += '<option value="14.154780555555556">14.154780555555556</option>';
+            latitude_options_str  += '<option value="14.168641666666666">14.168641666666666</option>';
+            sel_latitude.innerHTML = latitude_options_str;
+            div_latitude.appendChild(sel_latitude);
+            var lab_latitude = document.createElement('div');
+            lab_latitude.innerHTML = 'latitude';
+            lab_latitude.className = 'filterlabel';
+            div_latitude.appendChild(lab_latitude);
+            var reset_latitude = document.createElement('div');
+            reset_latitude.innerHTML = 'clear filter';
+            reset_latitude.className = 'filterlabel';
+            reset_latitude.onclick = function() {
+                var options = document.getElementById("sel_latitude").options;
+                for (var i=0; i < options.length; i++) {
+                    options[i].selected = false;
+                }
+                filterFunc();
+            };
+            div_latitude.appendChild(reset_latitude);
         </script>        
     </body>
 </html>
