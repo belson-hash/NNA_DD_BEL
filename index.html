@@ -140,25 +140,19 @@
         layer_GoogleSatellite_0;
         map.addLayer(layer_GoogleSatellite_0);
         function pop_NNADD_1(feature, layer) {
-            var popupContent = '<table>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['longitude'] !== null ? autolinker.link(String(feature.properties['longitude']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['latitude'] !== null ? autolinker.link(String(feature.properties['latitude']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['timestamp'] !== null ? autolinker.link(String(feature.properties['timestamp']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td class="visible-with-data" id="URL" colspan="2"><strong>URL</strong><br />' + (feature.properties['URL'] !== null ? feature.properties['URL'] : '') + '</td>\
-                    </tr>\
-                </table>';
-            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
-			layer.on('popupopen', function(e) {
-				addClassToPopupIfMedia(content, e.popup);
-			});
-			layer.bindPopup(content, { maxHeight: 400 });
+    // URL field already contains full <img ...> HTML
+       var photoHtml = (feature.properties && feature.properties['URL']) ? String(feature.properties['URL']) : '';
+       var ts = (feature.properties && feature.properties['timestamp']) ? String(feature.properties['timestamp']) : '';
+
+    // Build popup content (no table, no lon/lat spam)
+       var popupContent =
+        '<div style="width:380px;">' +
+            (photoHtml ? photoHtml : '') +
+            (ts ? '<div style="margin-top:6px;"><b>Date:</b> ' + ts + '</div>' : '') +
+        '</div>';
+
+    // Bind popup directly (do NOT precompute content with removeEmptyRowsFromPopupContent)
+    layer.bindPopup(popupContent, { maxWidth: 420, maxHeight: 400 });
         }
 
         function style_NNADD_1_0() {
