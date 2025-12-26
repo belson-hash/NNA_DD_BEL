@@ -140,20 +140,31 @@
         layer_GoogleSatellite_0;
         map.addLayer(layer_GoogleSatellite_0);
         function pop_NNADD_1(feature, layer) {
-    // URL field already contains full <img ...> HTML
-       var photoHtml = (feature.properties && feature.properties['URL']) ? String(feature.properties['URL']) : '';
-       var ts = (feature.properties && feature.properties['timestamp']) ? String(feature.properties['timestamp']) : '';
+    var photoHtml = (feature.properties && feature.properties['URL']) ? String(feature.properties['URL']) : '';
+    var ts = (feature.properties && feature.properties['timestamp']) ? String(feature.properties['timestamp']) : '';
 
-    // Build popup content (no table, no lon/lat spam)
-       var popupContent =
+    // Inject referrerpolicy + cache buster if field contains <img ...>
+    if (photoHtml && photoHtml.indexOf('<img') !== -1) {
+        // Add referrerpolicy if missing
+        if (photoHtml.indexOf('referrerpolicy=') === -1) {
+            photoHtml = photoHtml.replace('<img ', '<img referrerpolicy="no-referrer" ');
+        }
+        // Add cache buster to src
+        photoHtml = photoHtml.replace(/src="([^"]+)"/, function(_, u){
+            var sep = (u.indexOf('?') >= 0) ? '&' : '?';
+            return 'src="' + u + sep + 't=' + Date.now() + '"';
+        });
+        }
+
+    var popupContent =
         '<div style="width:380px;">' +
             (photoHtml ? photoHtml : '') +
             (ts ? '<div style="margin-top:6px;"><b>Date:</b> ' + ts + '</div>' : '') +
         '</div>';
 
-    // Bind popup directly (do NOT precompute content with removeEmptyRowsFromPopupContent)
     layer.bindPopup(popupContent, { maxWidth: 420, maxHeight: 400 });
         }
+
 
         function style_NNADD_1_0() {
             return {
